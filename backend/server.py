@@ -272,7 +272,7 @@ class GridSenseHandler(BaseHTTPRequestHandler):
 def main() -> None:
     catalyst_port = os.environ.get("X_ZOHO_CATALYST_LISTEN_PORT", "").strip()
     host = os.environ.get("HOST", "0.0.0.0" if catalyst_port else "127.0.0.1")
-    port = int(catalyst_port or os.environ.get("PORT", "8080"))
+    port = int(catalyst_port or os.environ.get("PORT", "5000"))
     initialize_store()
     server = ThreadingHTTPServer((host, port), GridSenseHandler)
     logger.info("GridSense AI listening on http://%s:%s", host, port)

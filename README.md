@@ -11,9 +11,12 @@ Run each numbered step from the project root, in order. Do not change into the n
 **1. Open the project folder and check Python:**
 
 ```powershell
-cd "C:\Users\vaish\OneDrive\Documents\smart-energy-microgrid"
+# Replace this example with the actual current folder path.
+cd "C:\path\to\smart-energy-microgrid"
 python --version
 ```
+
+Use the current project folder, not its former OneDrive location. You can open PowerShell there by typing `powershell` in the File Explorer address bar. If the project was moved, recreate its virtual environment instead of relying on the moved environment; keep the old environment until the new one works.
 
 Python 3.11 or newer is required. If `python --version` shows an older version, install a supported Python version and reopen PowerShell.
 
@@ -40,12 +43,14 @@ node --check frontend\app.js
 **4. Start the dashboard:**
 
 ```powershell
+$env:HOST = "127.0.0.1"
+$env:PORT = "5000"
 .\.venv\Scripts\python.exe -m backend.server
 ```
 
-Wait until the terminal prints `GridSense AI listening on http://127.0.0.1:8080`, then leave that terminal running while using the app. If the PowerShell prompt returns or the terminal prints `Shutdown requested`, the server has stopped; run the command above again and keep that terminal open. Open <http://127.0.0.1:8080>. For a first demo, choose **Telemetry & data → Official sample → Load official sample → Generate forecast**. To create a new 24-hour dataset, choose **Guided entry**, name it, enter a date as `DD-MM-YYYY`, choose a start hour such as `13:00`, set the numeric defaults, create the table, and edit rows as needed. To import existing energy rows, choose **Import CSV, TSV, or JSON**. Without QuickML credentials, forecasts use the explicitly labelled local demo model. Press **Ctrl+C** in the server terminal when you want to stop it.
+Wait until the terminal prints `GridSense AI listening on http://127.0.0.1:5000`, then leave that terminal running while using the app. If the PowerShell prompt returns or the terminal prints `Shutdown requested`, the server has stopped; run the command above again and keep that terminal open. Open <http://127.0.0.1:5000>. For a first demo, choose **Telemetry & data → Official sample → Load official sample → Generate forecast**. To create a new 24-hour dataset, choose **Guided entry**, name it, enter a date as `DD-MM-YYYY`, choose a start hour such as `13:00`, set the numeric defaults, create the table, and edit rows as needed. To import existing energy rows, choose **Import CSV, TSV, or JSON**. Without QuickML credentials, forecasts use the explicitly labelled local demo model. Press **Ctrl+C** in the server terminal when you want to stop it.
 
-If the VS Code embedded browser stays blank, first confirm the server terminal still shows it is listening and has not returned to a PowerShell prompt. Then refresh the preview or open `http://127.0.0.1:8080` in Edge or Chrome. When a browser reaches the app, the server terminal should log requests for `/`, `/styles.css`, `/intake.css`, `/app.js`, and `/api/health`. If those lines do not appear, the browser preview is not connecting to the local server. Do not start a second server on the same port.
+If the VS Code embedded browser stays blank, first confirm the server terminal still shows it is listening and has not returned to a PowerShell prompt. Then refresh the preview or open `http://127.0.0.1:5000` in Edge or Chrome. When a browser reaches the app, the server terminal should log requests for `/`, `/styles.css`, `/intake.css`, `/app.js`, and `/api/health`. If those lines do not appear, the browser preview is not connecting to the local server. Do not start a second server on the same port.
 
 **5. Optional: run the prediction CLI.** Open a second PowerShell window in the project root and run:
 
@@ -63,6 +68,37 @@ That command predicts all 1,000 rows in the official sample file and writes `pre
 ```
 
 The first command summarizes the official CSV files. The second calculates local-model holdout metrics; neither command is needed just to start the dashboard.
+
+## Troubleshooting startup and QuickML
+
+The commands above explicitly select port **5000**. The server defaults to **5000** when `PORT` is absent; setting it explicitly keeps the launch command clear. Catalyst's `X_ZOHO_CATALYST_LISTEN_PORT`, when provided, takes precedence over `PORT`. Restart the server after changing environment variables, and keep its terminal open.
+
+For a blank page or “Failed to fetch”, run these commands in a second PowerShell terminal:
+
+```powershell
+Test-NetConnection 127.0.0.1 -Port 5000
+Invoke-RestMethod -Uri "http://127.0.0.1:5000/api/health" | ConvertTo-Json -Depth 6
+(Invoke-WebRequest -Uri "http://127.0.0.1:5000/app.js" -UseBasicParsing).StatusCode
+Get-NetTCPConnection -LocalPort 5000 -State Listen | Select-Object LocalAddress, LocalPort, OwningProcess
+```
+
+Confirm the health response identifies **GridSense AI** and the JavaScript request returns HTTP 200. An open port alone may belong to another application. Open the same host and port used by the Python server and hard-refresh the browser. Check its Console and Network panels for failed assets or API requests. Do not open `frontend/index.html` directly or serve the frontend separately: its relative `/api/...` requests require the Python backend on the same origin. Inspect the Python terminal for errors. Do not stop unrelated processes merely to free a port. Port 8080 was reported to show a blank page on the user's machine; its cause has not been established, and changing ports alone does not diagnose it.
+
+“QuickML endpoint set” means only that `QUICKML_ENDPOINT_URL` is nonempty; the indicator remains amber. Older versions displayed “QuickML configured” with a green indicator. Neither label proves that the URL is valid, reachable, authenticated, or able to predict. A “Could not reach the configured QuickML endpoint” error means the backend's outbound HTTP request failed; check the endpoint URL, DNS, proxy, TLS trust, and network access from the machine running Python. Keep TLS verification enabled. A separate “Failed to fetch” browser message concerns browser-to-backend communication and needs its own network check.
+
+To isolate QuickML from the local application, stop the server, then use this command in its PowerShell session and restart on port 5000:
+
+```powershell
+Remove-Item Env:QUICKML_ENDPOINT_URL -ErrorAction SilentlyContinue
+$env:PORT = "5000"
+.\.venv\Scripts\python.exe -m backend.server
+```
+
+Load the official sample and generate a forecast. This explicitly selects **local demonstration mode**, not a repaired QuickML integration. To use QuickML again, stop the server, restore the real published endpoint and required authentication in the server process, and restart. Never use placeholder values as real endpoint settings. Merely copying `.env.example` to `.env` has no effect: this application does not automatically load `.env`.
+
+Verify the published model in Catalyst's endpoint tester first. Use its exact endpoint URL, region, environment, authentication headers, feature schema, and request/response examples. The current adapter sends `{"data":[...]}` and accepts `{"predictions":[...]}` or `{"status":"success","result":[{"prediction":...}]}`. Those are the adapter's implemented formats, not a guarantee that every published QuickML endpoint uses them. If the endpoint tester specifies a different format, the adapter requires a reviewed code change. Do not substitute a console page URL for an inference URL. A successful connection must return one finite numeric demand prediction for each input row; generating and restoring a 24-hour QuickML-labelled forecast is the end-to-end check.
+
+HTTP 401/403 from the inference service indicates authentication or authorization needs investigation; check the endpoint key, OAuth scope/expiry, organization, and deployment environment. HTTP 429 indicates rate limiting. Timeouts and network failures are different from response-schema errors. The adapter deliberately does not silently switch to the local model after a configured QuickML request fails. Previously saved datasets can be loaded and retried after fixing the connection.
 
 ## Project overview
 
@@ -172,7 +208,9 @@ $env:QUICKML_ENDPOINT_URL = "<published-endpoint-url>"
 $env:QUICKML_ENDPOINT_KEY = "<endpoint-key>"
 $env:ZOHO_OAUTH_TOKEN = "<oauth-access-token>"
 $env:CATALYST_ORG = "<organization-id>"
-$env:CATALYST_ENVIRONMENT = "Development"
+$env:CATALYST_ENVIRONMENT = "Development" # Match the published endpoint environment.
+$env:HOST = "127.0.0.1"
+$env:PORT = "5000"
 .\.venv\Scripts\python.exe -m backend.server
 ```
 
@@ -220,12 +258,12 @@ The rule module and exact boundaries are covered by automated tests. These are s
 
 ## Zoho Catalyst QuickML setup
 
-QuickML training and publishing have **not** been performed because there is no Catalyst account, QuickML model endpoint, or credential configured in this workspace. To connect the actual service:
+Live QuickML inference has **not** been verified from this workspace. The supplied Catalyst screenshots show the prediction pipeline as Not-Executed, with no operations configured and Endpoint Created: No. Complete training and endpoint creation before configuring this pipeline for inference; these screenshots do not establish the current state of other projects or environments. To connect the actual service:
 
 1. In Catalyst QuickML, create a regression pipeline from the unmodified official `train_telemetry.csv`; choose `target_demand_kw` as the target and use the official four input fields.
 2. Inspect the `timestamp` handling in QuickML. If QuickML requires a transformation, apply the same deterministic transform for both training and endpoint inference. Do not introduce uncomputed lag or rolling features.
 3. Evaluate on a chronological holdout where supported. Record the actual QuickML metrics from Catalyst; do not copy the local demo metrics.
-4. Publish a model version and copy the endpoint URL, endpoint key, and OAuth access token with the `QuickML.deployment.READ` scope. Confirm the endpoint's request schema with its model tester before integration. The adapter sends the starter kit's batch request body (`{"data":[...]}`) and accepts its `{"predictions":[...]}` response, as well as the documented QuickML SDK-style `{"status":"success","result":[{"prediction": ...}]}` response. The endpoint detail page's sample request and response remain authoritative for the specific model.
+4. Publish a model version and copy the endpoint URL, endpoint key, and OAuth access token with the `QuickML.deployment.READ` scope. Confirm the endpoint's request schema with its model tester before integration. The adapter sends the starter kit's batch request body (`{"data":[...]}`) and accepts its `{"predictions":[...]}` response, as well as the implemented SDK-style `{"status":"success","result":[{"prediction": ...}]}` response. The endpoint detail page's sample request and response remain authoritative for the specific model.
 5. Configure these environment variables in the backend/AppSail service, not frontend JavaScript:
 
 ```text
@@ -236,7 +274,7 @@ CATALYST_ORG=<Catalyst organization identifier>
 CATALYST_ENVIRONMENT=Development
 ```
 
-The request includes the endpoint key and documented Catalyst OAuth headers when values are supplied. Catalyst documents the REST endpoint as a POST authenticated with `X-QUICKML-ENDPOINT-KEY`, `Authorization: Zoho-oauthtoken ...`, `CATALYST-ORG`, and `Environment`, with the `QuickML.deployment.READ` OAuth scope. See [QuickML Pipeline Endpoints](https://docs.catalyst.zoho.com/en/quickml/help/pipeline-endpoints/).
+The current adapter includes the endpoint key and Catalyst OAuth headers when values are supplied. Check the endpoint detail page to confirm which values its POST request requires: `X-QUICKML-ENDPOINT-KEY`, `Authorization: Zoho-oauthtoken ...`, `CATALYST-ORG`, and `Environment`, and verify the required OAuth scope (the existing integration guide specifies `QuickML.deployment.READ`). See [QuickML Pipeline Endpoints](https://docs.catalyst.zoho.com/en/quickml/help/pipeline-endpoints/).
 
 Use your organization's approved token rotation and secret-storage process. Do not commit `.env`, access tokens, endpoint keys, or real configuration values. An endpoint URL alone is not evidence of a successful integration; the app only reports a QuickML forecast after a valid endpoint response.
 

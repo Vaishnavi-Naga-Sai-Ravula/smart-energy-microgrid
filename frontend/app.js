@@ -108,12 +108,12 @@
       const health = await api('/api/health');
       state.health = health;
       const configured = health.model.quickml_configured;
-      $('#connection-label').textContent = configured ? 'QuickML configured' : 'Demo model active';
-      dot.className = `status-dot ${configured ? '' : 'warn'}`;
+      $('#connection-label').textContent = configured ? 'QuickML endpoint set' : 'Demo model active';
+      dot.className = 'status-dot warn';
       $('#model-status-title').textContent = configured ? 'QuickML endpoint configured' : 'QuickML endpoint not configured';
       $('#model-status-description').textContent = configured ? 'Connection is checked during inference; endpoint was not probed on page load.' : 'Forecasts use a local model trained from official data and are labelled as demonstration output.';
       $('#model-source-value').textContent = health.model.prediction_source;
-      $('#endpoint-state').textContent = configured ? 'Configured · verified on forecast' : 'Not configured';
+      $('#endpoint-state').textContent = configured ? 'Configured · see forecast result' : 'Not configured';
       $('#token-state').textContent = health.model.api_token_configured ? 'Configured in backend' : 'Not configured';
       $('#quickml-detail').textContent = configured ? 'Endpoint URL is available to the backend. A successful model response is required before the forecast source is confirmed.' : 'No QuickML endpoint is configured. Set QUICKML_ENDPOINT_URL in the backend environment to use the published model.';
       $('#settings-quickml').textContent = configured ? 'Endpoint configured; awaiting inference verification' : 'No published endpoint configured';
