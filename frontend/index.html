@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1015">
+  <meta name="description" content="GridSense AI microgrid demand forecasting and decision support dashboard.">
+  <title>GridSense AI · Microgrid Command Center</title>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/intake.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="#overview" aria-label="GridSense AI overview">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36"><path d="M20.5 3 8 20h9l-1.5 13L28 15h-9z"/><path class="brand-line" d="M4 27h7m14 0h7"/></svg></span>
+        <span class="brand-copy"><strong>GridSense<span>AI</span></strong><small>ENERGY COMMAND</small></span>
+      </a>
+      <div class="site-switch"><span class="site-icon">⌂</span><span><strong>North Campus</strong><small>Microgrid · Site 01</small></span><span class="chevron">⌄</span></div>
+      <div class="nav-label">WORKSPACE</div>
+      <nav class="primary-nav" aria-label="Main navigation">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span>Overview</button>
+        <button class="nav-item" data-view="forecast"><span class="nav-icon">⌁</span>Demand forecast</button>
+        <button class="nav-item" data-view="controller"><span class="nav-icon">⎇</span>Grid controller</button>
+        <button class="nav-item" data-view="telemetry"><span class="nav-icon">▤</span>Telemetry &amp; data</button>
+        <button class="nav-item" data-view="alerts"><span class="nav-icon">♧</span>Alerts &amp; events<span class="nav-count" id="nav-alert-count">0</span></button>
+      </nav>
+      <div class="nav-label nav-label-lower">INTELLIGENCE</div>
+      <nav class="primary-nav" aria-label="Intelligence navigation">
+        <button class="nav-item" data-view="copilot"><span class="nav-icon">✳</span>GridSense Copilot</button>
+        <button class="nav-item" data-view="model"><span class="nav-icon">◈</span>Model health</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span>Settings &amp; integrations</button>
+        <div class="system-card"><span class="status-dot"></span><div><strong>Decision support online</strong><small>Hardware link not configured</small></div><span class="system-chevron">›</span></div>
+        <div class="user-row"><span class="avatar">OP</span><span><strong>Grid operator</strong><small>Local workspace</small></span><button class="icon-button quiet" aria-label="Account menu">···</button></div>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="menu-toggle" aria-label="Open navigation">☰</button>
+        <div class="breadcrumbs"><span>North Campus</span><span class="crumb-divider">/</span><strong id="page-title">Overview</strong></div>
+        <div class="topbar-actions">
+          <div class="connection-chip" id="connection-chip"><span class="status-dot"></span><span id="connection-label">Checking model</span></div>
+          <span class="topbar-divider"></span>
+          <div class="local-clock"><strong id="clock-time">--:--</strong><small id="clock-date">Local time</small></div>
+          <button id="theme-toggle" class="icon-button theme-button" aria-label="Switch to light theme" title="Switch theme">☼</button>
+          <button class="user-mini" aria-label="Operator profile">OP</button>
+        </div>
+      </header>
+      <div class="content-wrap">
+        <div id="global-notice" class="notice hidden" role="status"></div>
+
+        <section class="view active" id="view-overview" aria-labelledby="overview-heading">
+          <div class="page-heading heading-row">
+            <div><div class="eyebrow"><span class="eyebrow-bar"></span>MONDAY · MICROGRID OPERATIONS</div><h1 id="overview-heading">Energy overview</h1><p class="lede">Forecast demand. Understand transitions. Keep the next 24 hours in view.</p></div>
+            <button class="button button-primary" id="run-main"><span>↗</span> Generate 24-hour forecast</button>
+          </div>
+          <div class="source-banner" id="source-banner"><span class="banner-icon">i</span><div><strong>Awaiting forecast inputs</strong><span>Upload 24 hourly weather rows or load the official sample to begin. No live telemetry is connected.</span></div><button class="text-button" data-nav="telemetry">Add telemetry <span>→</span></button></div>
+          <div class="metrics-grid">
+            <article class="metric-card"><div class="metric-top"><span>PEAK FORECAST</span><span class="metric-icon amber">⌁</span></div><div class="metric-value"><strong id="metric-peak">—</strong><small>kW</small></div><div class="metric-foot" id="metric-peak-foot">No forecast generated</div></article>
+            <article class="metric-card"><div class="metric-top"><span>AVERAGE DEMAND</span><span class="metric-icon blue">∿</span></div><div class="metric-value"><strong id="metric-average">—</strong><small>kW</small></div><div class="metric-foot">Across forecast window</div></article>
+            <article class="metric-card"><div class="metric-top"><span>MAIN GRID MODE</span><span class="metric-icon neutral">⌂</span></div><div class="metric-value"><strong id="metric-main">—</strong><small>hours</small></div><div class="metric-foot">Outside switching conditions</div></article>
+            <article class="metric-card"><div class="metric-top"><span>RENEWABLE STORAGE</span><span class="metric-icon green">◉</span></div><div class="metric-value"><strong id="metric-renewable">—</strong><small>hours</small></div><div class="metric-foot">Threshold and evening-window rules</div></article>
+            <article class="metric-card metric-alert"><div class="metric-top"><span>CRITICAL ALERTS</span><span class="metric-icon red">!</span></div><div class="metric-value"><strong id="metric-alerts">—</strong><small>alerts</small></div><div class="metric-foot">At or above 200 kW</div></article>
+            <article class="metric-card"><div class="metric-top"><span>BATTERY TELEMETRY</span><span class="metric-icon neutral">▣</span></div><div class="metric-value metric-unconfigured"><strong>Unconfigured</strong></div><div class="metric-foot">No real state-of-charge data</div></article>
+          </div>
+          <div class="dashboard-grid overview-grid">
+            <article class="panel chart-panel wide-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">NEXT 24 HOURS</div><h2>Demand outlook</h2></div><div class="chart-meta"><span class="legend-key forecast-key"></span>Forecast estimate <button class="icon-button mini" aria-label="Chart information" title="Point estimates; uncertainty is not quantified">i</button></div></div>
+              <div class="chart-wrap" id="demand-chart"><div class="empty-chart"><span class="empty-orbit">⌁</span><strong>Your forecast will appear here</strong><span>Load the official sample or add 24 hourly telemetry rows.</span></div></div>
+              <div class="chart-footer"><span>Demand <b>(kW)</b></span><span id="chart-window-label">24 hourly intervals</span></div>
+            </article>
+            <article class="panel mode-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">CONTROLLER OUTPUT</div><h2>Power mode timeline</h2></div><button class="icon-button mini" data-nav="controller" aria-label="Open controller">↗</button></div>
+              <div id="mode-timeline" class="timeline-empty">Forecast results will map each hour to a controller mode.</div>
+              <div class="timeline-legend"><span><i class="legend-dot grid"></i>Main grid</span><span><i class="legend-dot renew"></i>Renewable storage</span></div>
+            </article>
+            <article class="panel distribution-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">FORECAST PROFILE</div><h2>Demand distribution</h2></div></div>
+              <div id="distribution-chart" class="distribution-empty">Distribution appears after a forecast.</div>
+            </article>
+            <article class="panel attention-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">OPERATOR BRIEF</div><h2>Needs attention</h2></div><button class="text-button" data-nav="alerts">All alerts <span>→</span></button></div>
+              <div id="attention-list" class="attention-empty">No forecast risks to review yet.</div>
+            </article>
+          </div>
+          <div class="disclaimer-line"><span>ⓘ</span> Software decision support only. No real battery, grid switching, or live infrastructure is connected.</div>
+        </section>
+
+        <section class="view" id="view-forecast" aria-labelledby="forecast-heading">
+          <div class="page-heading heading-row"><div><div class="eyebrow"><span class="eyebrow-bar"></span>FORECAST WORKSPACE</div><h1 id="forecast-heading">Demand forecast</h1><p class="lede">Inspect hourly estimates, controller reasons, and the data behind each point.</p></div><div class="button-group"><button class="button button-secondary" id="export-forecast">↓ Predictions CSV</button><button class="button button-secondary" id="export-details">↓ Decision report</button><button class="button button-primary" id="run-forecast">↗ Generate forecast</button></div></div>
+          <div class="panel chart-panel forecast-chart-panel"><div class="panel-heading"><div><div class="panel-kicker">DEMAND · kW</div><h2>24-hour demand curve</h2></div><div class="chart-meta"><span class="legend-key forecast-key"></span>Forecast <span class="threshold-key"></span>160 kW switch <span class="threshold-key critical-key"></span>200 kW critical</div></div><div class="chart-wrap chart-wrap-large" id="forecast-chart"><div class="empty-chart"><strong>No forecast to display</strong><span>Generate a forecast from the official sample or your telemetry.</span></div></div><div class="chart-footer"><span>All values are estimates, not measured readings</span><span id="forecast-generated-at">Not generated</span></div></div>
+          <div class="panel table-panel"><div class="panel-heading table-heading"><div><div class="panel-kicker">HOURLY RESULTS</div><h2>Forecast detail</h2></div><div class="table-tools"><label class="search-box"><span>⌕</span><input id="forecast-search" type="search" placeholder="Filter hours" aria-label="Filter forecast hours"></label><button class="button button-small button-secondary" id="table-toggle">Jump to table</button></div></div><div class="table-scroll"><table><thead><tr><th><button class="sort-button" data-sort="timestamp">FORECAST HOUR ↕</button></th><th><button class="sort-button" data-sort="target_demand_kw">DEMAND ↕</button></th><th>POWER MODE</th><th>OVERLOAD</th><th>WHY THIS MODE</th></tr></thead><tbody id="forecast-rows"><tr><td class="empty-cell" colspan="5">Forecast results will appear here.</td></tr></tbody></table></div></div>
+          <div class="panel saved-data-panel"><div class="panel-heading"><div><div class="panel-kicker">PERSISTED RESULTS</div><h2>Forecast history</h2></div><span class="muted-label">Saved across server restarts</span></div><div id="saved-forecasts" class="saved-list"><p class="helper-text">Loading forecast history…</p></div></div>
+        </section>
+
+        <section class="view" id="view-controller" aria-labelledby="controller-heading">
+          <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-bar"></span>DECISION SUPPORT</div><h1 id="controller-heading">Grid controller</h1><p class="lede">Official HackSphere transition rules evaluated independently for every forecast hour.</p></div></div>
+          <div class="rule-cards"><article class="rule-card rule-renew"><span class="rule-symbol">◉</span><div><small>RULE A · RENEWABLE STORAGE MODE</small><strong>Demand &gt; 160 kW <em>OR</em> hour 18:00–22:00 inclusive</strong></div></article><article class="rule-card rule-grid"><span class="rule-symbol">⌂</span><div><small>RULE B · MAIN GRID MODE</small><strong>Demand ≤ 160 kW <em>AND</em> outside the evening window</strong></div></article><article class="rule-card rule-alert"><span class="rule-symbol">!</span><div><small>RULE C · CRITICAL OVERLOAD</small><strong>Demand ≥ 200 kW · alert independent of power mode</strong></div></article></div>
+          <div class="panel controller-panel"><div class="panel-heading"><div><div class="panel-kicker">HOURLY DECISIONS</div><h2>Forecast-to-mode map</h2></div><span class="muted-label">Software signals · no physical control</span></div><div id="controller-list" class="controller-empty">Generate a forecast to inspect decisions.</div></div>
+        </section>
+
+        <section class="view" id="view-telemetry" aria-labelledby="telemetry-heading">
+          <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-bar"></span>DATA INTAKE</div><h1 id="telemetry-heading">Telemetry &amp; data</h1><p class="lede">Enter hourly weather features, import a table, or load a sample. The same validated data powers forecast, controller, alerts, and copilot views.</p></div></div>
+          <div class="data-entry-tabs" role="tablist" aria-label="Choose a data entry method">
+            <button class="data-entry-tab active" id="tab-guided" role="tab" aria-selected="true" aria-controls="panel-guided" data-input-tab="guided">Guided entry</button>
+            <button class="data-entry-tab" id="tab-import" role="tab" aria-selected="false" aria-controls="panel-import" data-input-tab="import">Import CSV, TSV, or JSON</button>
+            <button class="data-entry-tab" id="tab-sample" role="tab" aria-selected="false" aria-controls="panel-sample" data-input-tab="sample">Official sample</button>
+          </div>
+          <div class="panel dataset-name-panel"><label for="dataset-name"><strong>Data set name</strong><input id="dataset-name" type="text" maxlength="100" value="My microgrid forecast" placeholder="For example: North campus · 26 Oct"><small>Name this input so you can find it again in saved data.</small></label></div>
+          <div class="data-entry-panel" id="panel-guided" role="tabpanel" aria-labelledby="tab-guided">
+            <div class="panel manual-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">GUIDED HOURLY ENTRY</div><h2>Create a 24-hour data table</h2></div><span class="muted-label">Every row remains editable</span></div>
+              <div class="manual-setup-grid">
+                <label>Start date <input id="manual-date" type="text" inputmode="numeric" autocomplete="off" placeholder="DD-MM-YYYY" maxlength="10"><small>Enter DD-MM-YYYY, for example 26-10-2026.</small></label>
+                <label>First hour <input id="manual-time" type="time" step="3600"><small>24-hour time; use an exact hour such as 13:00.</small></label>
+                <label>Default temperature <span>°C</span><input id="manual-temp" type="number" step="0.1" min="-80" max="60" value="24"><small>Number from −80 to 60.</small></label>
+                <label>Default humidity <span>%</span><input id="manual-humidity" type="number" step="0.1" min="0" max="100" value="50"><small>Number from 0 to 100.</small></label>
+                <label>Default solar irradiance <span>W/m²</span><input id="manual-solar" type="number" step="0.1" min="0" max="2000" value="0"><small>Number from 0 to 2,000; use 0 at night.</small></label>
+              </div>
+              <p class="helper-text">Create the hourly table once, then edit any hour below. The default measurements are copied into all 24 rows so you can adjust only the hours that differ.</p>
+              <button class="button button-secondary" id="build-manual-window" type="button">Create 24-hour table</button>
+              <div id="manual-grid" class="manual-grid empty-grid">Set a start date and time, then create your table.</div>
+            </div>
+          </div>
+          <div class="data-entry-panel hidden" id="panel-import" role="tabpanel" aria-labelledby="tab-import">
+            <div class="panel import-panel">
+              <div class="panel-heading"><div><div class="panel-kicker">FILE OR PASTED TABLE</div><h2>Import your own data</h2></div><span class="muted-label">Maximum file size: 2 MB</span></div>
+              <label class="file-drop"><strong>Choose a CSV, TSV, or JSON file</strong><span>One row per hour; include a date/time and the three weather features below.</span><input type="file" id="data-file" accept=".csv,.tsv,.json,text/csv,text/tab-separated-values,application/json"></label>
+              <div class="paste-import"><label for="data-format">Format<select id="data-format"><option value="csv">CSV · comma separated</option><option value="tsv">TSV · tab separated</option><option value="json">JSON · array of objects</option></select></label><label for="data-text">Or paste your table / JSON<textarea id="data-text" rows="7" spellcheck="false" placeholder="CSV: timestamp,ambient_temp_c,humidity_pct,solar_irradiance_wm2&#10;TSV: same header fields separated by tabs&#10;JSON: [{&quot;timestamp&quot;:&quot;26-10-2026 13:00&quot;,&quot;ambient_temp_c&quot;:24,&quot;humidity_pct&quot;:50,&quot;solar_irradiance_wm2&quot;:0}]" aria-label="Paste CSV, TSV, or JSON data"></textarea></label><button class="button button-secondary" id="load-pasted-data" type="button">Validate pasted data</button></div>
+              <div class="template-actions"><span class="helper-text">Need a starting point?</span><button class="text-button" id="download-csv-template" type="button">Download CSV template</button><button class="text-button" id="download-tsv-template" type="button">Download TSV template</button><button class="text-button" id="download-json-template" type="button">Download JSON example</button></div>
+              <p class="helper-text">Required features: date/time, ambient temperature (°C), humidity (%), and solar irradiance (W/m²). Common labels such as <code>date</code>, <code>time</code>, <code>temperature</code>, <code>humidity</code>, and <code>irradiance</code> are accepted. Extra fields are ignored; only these four features are saved and used by this energy model.</p>
+            </div>
+          </div>
+          <div class="data-entry-panel hidden" id="panel-sample" role="tabpanel" aria-labelledby="tab-sample">
+            <div class="panel sample-panel"><div class="source-icon demo-icon">✳</div><div><div class="panel-kicker">REPRODUCIBLE DEMO INPUT</div><h2>Official sample data</h2><p>Load the first 24 hourly rows of <code>sample_test_input.csv</code>. This is convenient for a demo; your imported or manually entered data follows the same validation and forecast path.</p><button class="button button-secondary" id="load-sample" type="button">Load official sample</button></div></div>
+          </div>
+          <div class="panel schema-panel"><div class="panel-heading"><div><div class="panel-kicker">VALIDATED INPUT</div><h2>Review data before forecasting</h2></div><span class="schema-count" id="row-count">0 / 24 rows</span></div><div class="schema-chips"><code>timestamp</code><code>ambient_temp_c</code><code>humidity_pct</code><code>solar_irradiance_wm2</code></div><p class="helper-text">Accepted date formats: YYYY-MM-DD HH:MM or DD-MM-YYYY HH:MM. Forecasts require exactly 24 consecutive hourly rows. Temperature: −80 to 60 °C; humidity: 0–100%; solar: 0–2,000 W/m². These are validation bounds, not site-specific guarantees.</p><div id="data-preview" class="preview-state">Choose Guided entry, Import data, or Official sample to begin. No forecast will run until a valid 24-hour window is ready.</div><div class="telemetry-actions"><span id="dataset-save-status" class="helper-text" role="status">Inputs are saved to this local workspace when you save or generate a forecast.</span><button class="button button-secondary" id="save-dataset" disabled>Save data set</button><button class="button button-primary" id="run-data-forecast" disabled>Generate forecast</button><button class="button button-quiet" id="clear-data">Clear input</button></div></div>
+          <div class="panel saved-data-panel"><div class="panel-heading"><div><div class="panel-kicker">LOCAL WORKSPACE</div><h2>Saved data sets</h2></div><span class="muted-label">Stored on this server</span></div><div id="saved-datasets" class="saved-list"><p class="helper-text">Loading saved data sets…</p></div></div>
+        </section>
+
+        <section class="view" id="view-alerts" aria-labelledby="alerts-heading">
+          <div class="page-heading heading-row"><div><div class="eyebrow"><span class="eyebrow-bar"></span>OPERATOR ATTENTION</div><h1 id="alerts-heading">Alerts &amp; events</h1><p class="lede">Critical overloads are evaluated at 200 kW, independently of selected mode.</p></div><label class="filter-select">Show<select id="alert-filter"><option value="all">All forecast hours</option><option value="critical">Critical overloads</option><option value="attention">Above 160 kW</option></select></label></div>
+          <div class="alert-summary-strip"><div><span class="alert-summary-icon">!</span><span><strong id="alert-summary-count">No forecast</strong><small>critical overload alerts</small></span></div><div><strong id="alert-summary-status">Awaiting forecast</strong><small>overall status</small></div><div><strong id="alert-summary-attention">—</strong><small>hours needing attention</small></div></div>
+          <div class="panel"><div class="panel-heading"><div><div class="panel-kicker">FORECAST EVENTS</div><h2>Hourly risk log</h2></div><span class="muted-label">Generated from current forecast only</span></div><div id="alert-list" class="attention-empty">No forecast events to display.</div></div>
+        </section>
+
+        <section class="view" id="view-copilot" aria-labelledby="copilot-heading">
+          <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-bar"></span>OPERATOR ASSISTANT</div><h1 id="copilot-heading">GridSense Copilot</h1><p class="lede">Understand forecast decisions using the current results and published controller rules.</p></div></div>
+          <div class="copilot-layout"><div class="panel copilot-chat"><div class="copilot-header"><div class="copilot-avatar">✳</div><div><strong>GridSense Copilot</strong><small><span class="status-dot"></span> Rule-based explanations · no language model connected</small></div><span class="copilot-tag">RESULTS-AWARE</span></div><div id="copilot-messages" class="chat-messages"><div class="assistant-message"><span class="message-avatar">✳</span><p>I can explain the current forecast, show why a mode changes, and identify overload hours. Generate a forecast to get started.</p></div></div><div class="prompt-suggestions"><button data-prompt="Summarize this forecast">Summarize this forecast</button><button data-prompt="Which hours need attention?">Which hours need attention?</button><button data-prompt="Why does the mode change?">Why does the mode change?</button></div><form id="copilot-form" class="chat-input"><input id="copilot-input" type="text" placeholder="Ask about the current forecast…" aria-label="Ask GridSense Copilot"><button class="button button-primary" type="submit" aria-label="Send question">↑</button></form></div><aside class="panel copilot-context"><div class="panel-kicker">CURRENT FORECAST CONTEXT</div><h2>What the assistant can see</h2><div id="copilot-context-content"><div class="context-empty">Generate a forecast to populate this context.</div></div><div class="context-note"><span>ⓘ</span>Explanations use forecast values and the official transition rules. Weather causes are not inferred.</div></aside></div>
+        </section>
+
+        <section class="view" id="view-model" aria-labelledby="model-heading">
+          <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-bar"></span>FORECAST ENGINE</div><h1 id="model-heading">Model health</h1><p class="lede">See which prediction path is active and how it was evaluated.</p></div></div>
+          <div class="model-status-banner" id="model-status-banner"><span class="status-dot"></span><div><strong id="model-status-title">Checking integration</strong><span id="model-status-description">Endpoint configuration is read from the backend environment.</span></div></div>
+          <div class="metrics-grid model-metrics"><article class="metric-card"><div class="metric-top"><span>MODEL SOURCE</span><span class="metric-icon blue">◈</span></div><div class="model-value" id="model-source-value">Checking…</div><div class="metric-foot">Used for the current forecast</div></article><article class="metric-card"><div class="metric-top"><span>HOLDOUT RMSE</span><span class="metric-icon amber">∿</span></div><div class="metric-value"><strong id="model-rmse">—</strong><small>kW</small></div><div class="metric-foot">Chronological 20% holdout</div></article><article class="metric-card"><div class="metric-top"><span>HOLDOUT MAE</span><span class="metric-icon green">⌁</span></div><div class="metric-value"><strong id="model-mae">—</strong><small>kW</small></div><div class="metric-foot">Calculated from official training file</div></article><article class="metric-card"><div class="metric-top"><span>TRAIN / HOLDOUT</span><span class="metric-icon neutral">▤</span></div><div class="metric-value"><strong id="model-rows">—</strong><small>rows</small></div><div class="metric-foot">Only shown after local model evaluation</div></article></div>
+          <div class="dashboard-grid model-detail-grid"><article class="panel"><div class="panel-kicker">QUICKML INTEGRATION</div><h2>Published model endpoint</h2><p id="quickml-detail">No QuickML endpoint is configured. Set QUICKML_ENDPOINT_URL in the backend environment to use the published model.</p><div class="integration-fields"><div><span>Endpoint</span><strong id="endpoint-state">Not configured</strong></div><div><span>Authentication token</span><strong id="token-state">Not configured</strong></div><div><span>Fallback behavior</span><strong>Local model, visibly labelled</strong></div></div></article><article class="panel"><div class="panel-kicker">EVALUATION NOTES</div><h2>What these metrics mean</h2><p>Local demo metrics use a chronological holdout from the supplied training data. The model candidates are selected by holdout RMSE, then refit on all official training rows for demonstration predictions.</p><p class="muted-paragraph">These are not QuickML metrics and do not predict hidden-set competition accuracy. QuickML status is not confirmed until an inference request succeeds.</p></article></div>
+          <div class="disclaimer-line"><span>ⓘ</span>All model output is a point estimate. Forecast uncertainty is not calibrated or quantified.</div>
+        </section>
+
+        <section class="view" id="view-settings" aria-labelledby="settings-heading">
+          <div class="page-heading"><div><div class="eyebrow"><span class="eyebrow-bar"></span>WORKSPACE CONFIGURATION</div><h1 id="settings-heading">Settings &amp; integrations</h1><p class="lede">Configure the app's appearance and review integration readiness.</p></div></div>
+          <div class="settings-grid"><article class="panel settings-panel"><div class="panel-kicker">APPEARANCE</div><h2>Display preference</h2><p>Choose a theme or follow your operating system's preference on first visit.</p><div class="theme-options"><button data-theme-choice="dark" class="theme-choice"><span class="theme-swatch dark-swatch">◐</span><span><strong>Dark</strong><small>Energy operations</small></span><span class="choice-check"></span></button><button data-theme-choice="light" class="theme-choice"><span class="theme-swatch light-swatch">☼</span><span><strong>Light</strong><small>Bright workspace</small></span><span class="choice-check"></span></button><button data-theme-choice="system" class="theme-choice"><span class="theme-swatch system-swatch">◑</span><span><strong>System</strong><small>Match device setting</small></span><span class="choice-check"></span></button></div></article><article class="panel settings-panel"><div class="panel-kicker">CONNECTED SERVICES</div><h2>Integration status</h2><div class="integration-list"><div><span class="integration-symbol">◈</span><span><strong>Zoho Catalyst QuickML</strong><small id="settings-quickml">Checking configuration</small></span><span class="integration-state" id="settings-quickml-badge">…</span></div><div><span class="integration-symbol">☁</span><span><strong>Weather forecast API</strong><small>No provider configured</small></span><span class="integration-state quiet-state">Unconfigured</span></div><div><span class="integration-symbol">▣</span><span><strong>Battery telemetry</strong><small>No live state of charge available</small></span><span class="integration-state quiet-state">Simulated / unavailable</span></div><div><span class="integration-symbol">⌂</span><span><strong>Grid hardware</strong><small>Software decision support only</small></span><span class="integration-state quiet-state">Not connected</span></div></div></article></div>
+          <div class="panel environment-panel"><div class="panel-kicker">BACKEND CONFIGURATION</div><h2>QuickML environment variables</h2><p>Configure secrets on the backend or Catalyst AppSail environment. The browser never receives model credentials.</p><div class="env-snippet"><code>QUICKML_ENDPOINT_URL=https://your-published-endpoint</code><code>QUICKML_ENDPOINT_KEY=your-endpoint-key</code><code>ZOHO_OAUTH_TOKEN=your-oauth-access-token</code><code>CATALYST_ORG=your-organization-id</code><code>CATALYST_ENVIRONMENT=Development</code></div></div>
+        </section>
+        <footer class="app-footer"><span>GRIDSENSE AI <i>·</i> HACKSPHERE 3.0</span><span>Decision support prototype <i>·</i> Local time: <b id="footer-time">—</b></span></footer>
+      </div>
+    </main>
+  </div>
+  <div id="loading-overlay" class="loading-overlay hidden" aria-live="polite" aria-busy="true"><div class="loading-card"><span class="loader"></span><strong>Preparing your forecast</strong><span>Validating rows and evaluating each forecast hour…</span></div></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

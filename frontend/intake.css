@@ -1,0 +1,49 @@
+.data-entry-tabs{display:flex;gap:7px;margin:0 0 12px;padding:0 0 8px;border-bottom:1px solid var(--line-soft)}
+.data-entry-tab{min-height:34px;padding:0 12px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--muted);font-size:11px;font-weight:600}
+.data-entry-tab:hover{background:var(--surface-2);color:var(--text)}
+.data-entry-tab.active{border-color:var(--line);background:var(--surface-2);color:var(--green)}
+.dataset-name-panel{margin-bottom:12px;padding:12px 15px}
+.dataset-name-panel label{display:grid;grid-template-columns:1fr;gap:5px;max-width:500px;color:var(--text-2);font-size:10px}
+.dataset-name-panel input,.manual-setup-grid input,.paste-import select,.paste-import textarea,.manual-entry-table input{width:100%;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);color:var(--text);padding:8px 9px;font-size:11px}
+.dataset-name-panel small,.manual-setup-grid small{color:var(--muted);font-size:9px}
+.manual-setup-grid{display:grid;grid-template-columns:repeat(5,minmax(110px,1fr));gap:10px;margin:4px 0 11px}
+.manual-setup-grid label{display:grid;gap:5px;color:var(--text-2);font-size:10px}
+.manual-setup-grid label span{color:var(--muted);font-size:9px}
+.manual-setup-grid input{height:34px}
+.manual-panel>.helper-text{max-width:900px;margin:0 0 11px}
+.manual-grid{margin-top:13px}
+.manual-grid.empty-grid{padding:20px;border:1px dashed var(--line);border-radius:7px;color:var(--muted);font-size:10px;text-align:center}
+.manual-grid .table-scroll{max-height:360px;border:1px solid var(--line-soft);border-radius:7px}
+.manual-entry-table{min-width:650px}
+.manual-entry-table th{position:sticky;top:0;z-index:1;background:var(--surface-2)}
+.manual-entry-table td{padding:5px 7px}
+.manual-entry-table td:first-child{min-width:150px}
+.manual-entry-table td:first-child strong,.manual-entry-table td:first-child span{display:block}
+.manual-entry-table td:first-child strong{font:500 9px 'DM Mono',monospace;color:var(--green)}
+.manual-entry-table td:first-child span{margin-top:2px;color:var(--muted);font-size:9px;white-space:nowrap}
+.manual-entry-table input{height:30px;padding:5px 7px}
+.import-panel{display:grid;gap:13px}
+.file-drop{display:grid;gap:4px;padding:17px;border:1px dashed var(--line);border-radius:8px;background:var(--surface-2);color:var(--text-2);cursor:pointer}
+.file-drop strong{font-size:11px}
+.file-drop span{color:var(--muted);font-size:9px}
+.file-drop input{margin-top:5px;color:var(--muted);font-size:10px}
+.paste-import{display:grid;grid-template-columns:180px minmax(0,1fr) auto;gap:9px;align-items:end}
+.paste-import label{display:grid;gap:5px;color:var(--text-2);font-size:10px}
+.paste-import textarea{min-height:128px;resize:vertical;font:10px/1.5 'DM Mono',monospace;white-space:pre}
+.paste-import select{height:35px}
+.template-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding-top:2px}
+.sample-panel{display:flex;align-items:center;gap:13px}
+.sample-panel p{max-width:700px;margin:7px 0 12px;color:var(--muted);font-size:10px;line-height:1.6}
+.schema-panel .schema-chips{margin-bottom:9px}
+.telemetry-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px}
+.telemetry-actions .helper-text{flex:1;min-width:220px}
+.saved-data-panel{margin-top:13px}
+.saved-list{display:grid;gap:8px}
+.saved-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 11px;border:1px solid var(--line-soft);border-radius:7px;background:var(--surface-2)}
+.saved-row>div:first-child{display:grid;gap:3px;min-width:0}
+.saved-row strong{overflow-wrap:anywhere;font-size:10px}
+.saved-row small{color:var(--muted);font-size:9px}
+.saved-actions{display:flex;flex-shrink:0;gap:6px}
+.saved-row .button{height:29px}
+@media(max-width:1000px){.manual-setup-grid{grid-template-columns:repeat(3,minmax(130px,1fr))}.paste-import{grid-template-columns:1fr 1fr}.paste-import label[for="data-text"]{grid-column:1/-1}.paste-import button{justify-self:start}}
+@media(max-width:620px){.data-entry-tabs{overflow-x:auto}.data-entry-tab{flex:0 0 auto;padding:0 9px;font-size:10px}.manual-setup-grid{grid-template-columns:1fr 1fr}.manual-setup-grid label:first-child{grid-column:1/-1}.paste-import{grid-template-columns:1fr}.paste-import label[for="data-text"]{grid-column:auto}.paste-import button{width:100%}.sample-panel{align-items:flex-start}.telemetry-actions{align-items:stretch}.telemetry-actions .helper-text{flex-basis:100%}.telemetry-actions .button{flex:1}.saved-row{align-items:flex-start;flex-direction:column}.saved-actions{align-self:stretch}.saved-actions .button{flex:1}}
