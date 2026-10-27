@@ -16,3 +16,4 @@ data/*.sqlite3-wal
 
 # Generated AppSail staging output
 appsail_build/
+gridsense-appsail-*.zip

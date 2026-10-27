@@ -22,6 +22,22 @@ moved, recreate the virtual environment as described in the README.
 
 ## 2. Prepare the AppSail source
 
+For console upload, create the complete Python 3.12 Linux ZIP directly on Windows
+(also works on macOS/Linux), without Docker or WSL:
+
+```powershell
+python scripts\package_appsail.py
+```
+
+Use your working Python executable if `python` is unavailable. The script downloads
+pinned Linux wheels into a temporary directory and includes them under `.app_deps`;
+it does not change your local virtual environment. Allow several minutes and about
+1 GB of free disk space. Upload the resulting `gridsense-appsail-python312.zip`
+unchanged, select **Python 3.12**, and use the startup command below. If the ZIP
+already exists, choose another name with `--output gridsense-appsail-rebuild.zip`.
+
+The following manual source-staging method is an alternative:
+
 ```powershell
 .\.venv\Scripts\python.exe scripts\stage_catalyst.py --output appsail_build
 ```
