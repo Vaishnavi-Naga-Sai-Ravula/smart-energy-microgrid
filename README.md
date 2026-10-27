@@ -100,6 +100,8 @@ Verify the published model in Catalyst's endpoint tester first. Use its exact en
 
 HTTP 401/403 from the inference service indicates authentication or authorization needs investigation; check the endpoint key, OAuth scope/expiry, organization, and deployment environment. HTTP 429 indicates rate limiting. Timeouts and network failures are different from response-schema errors. The adapter deliberately does not silently switch to the local model after a configured QuickML request fails. Previously saved datasets can be loaded and retried after fixing the connection.
 
+For deployment commands and a final verification sequence, see [Submission and deployment checklist](docs/submission-checklist.md).
+
 ## Project overview
 
 The challenge is to forecast hourly electricity demand and translate each predicted value into a Main Grid or Renewable Storage recommendation. The application supports guided 24-hour entry, CSV/TSV/JSON imports, the official test sample, point forecasts, the exact transition rules, operator alerts, data exports, a rule-based copilot, saved input sets and forecasts, model status, and a persisted light/dark theme.
@@ -220,6 +222,7 @@ All endpoints are same-origin with the dashboard.
 
 | Method and route | Purpose |
 | --- | --- |
+| `GET /api/ready` | Checks database schema access and required packaged files; returns 503 when dependencies are unavailable. Does not verify QuickML inference. |
 | `GET /api/health` | Backend status and non-secret integration configuration flags. It does not claim QuickML is healthy without a successful inference. |
 | `GET /api/sample` | First 24 valid rows from the official `sample_test_input.csv`, explicitly identified as sample input. |
 | `GET /api/datasets` / `GET /api/datasets/{id}` | List saved data sets or load one with its validated rows. |
@@ -282,7 +285,7 @@ Use your organization's approved token rotation and secret-storage process. Do n
 
 Run the checks in Step 3 of [Start here](#start-here-first-time-setup-and-commands-windows-powershell) from the project root. The JavaScript syntax check in that section is optional and only requires Node.js.
 
-Tests cover the official transition boundaries, inclusive evening hours, independent critical alerts, CSV/TSV/JSON parsing, timestamp formats, ranges, missing/nonnumeric values, empty and malformed data, duplicate headers/rows, forecast ordering, saved-data and forecast-history round trips, API error status, endpoint auth headers/failures, and finite prediction output. The QuickML tests use mocks; they do not claim a real Catalyst request. There is no configured browser automation test framework in this starter project.
+Tests cover the official transition boundaries, inclusive evening hours, independent critical alerts, CSV/TSV/JSON parsing, timestamp formats, ranges, missing/nonnumeric values, empty and malformed data, duplicate headers/rows, forecast ordering, saved-data and forecast-history round trips, API error status, endpoint auth headers/failures, and finite prediction output. The QuickML tests use mocks; they do not claim a real Catalyst request. Optional browser verification is available in `scripts/browser_smoke.py`. Install Playwright separately (`python -m pip install playwright` and `python -m playwright install chromium`), start the app, then run `python scripts/browser_smoke.py --base-url http://127.0.0.1:5000`. It exercises real forecasting, navigation, mobile layout, blocked local storage, and browser network errors; it creates sample records. Playwright is not an application runtime dependency. Use the appropriate virtual-environment Python executable for these commands.
 
 ## Deploy to Zoho Catalyst AppSail
 

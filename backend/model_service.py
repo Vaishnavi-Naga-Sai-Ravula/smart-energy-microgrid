@@ -7,6 +7,7 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 os.environ.setdefault("LOKY_MAX_CPU_COUNT", "1")
 
@@ -102,6 +103,16 @@ def _load_local_model() -> tuple[Any, dict[str, float]]:
 
 
 def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
+    try:
+        address = urlsplit(endpoint)
+        valid = address.scheme == "https" and bool(address.hostname) and not address.username and not address.password and not address.fragment
+        address.port  # Validate malformed port values before requests sees the URL.
+    except ValueError:
+        valid = False
+    if not valid or "<" in endpoint or ">" in endpoint or "YOUR_PUBLISHED" in endpoint:
+        raise ModelIntegrationError("Set a real HTTPS QuickML inference URL from the endpoint page; placeholders and console page URLs are not inference endpoints.")
+    if address.hostname and address.hostname.lower().startswith("console."):
+        raise ModelIntegrationError("The Catalyst console page is not an inference URL. Create an endpoint and copy its prediction URL.")
     headers = {"Content-Type": "application/json"}
     endpoint_key = os.environ.get("QUICKML_ENDPOINT_KEY", "").strip()
     oauth_token = os.environ.get("ZOHO_OAUTH_TOKEN", "").strip()
@@ -116,7 +127,9 @@ def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
     if environment:
         headers["Environment"] = environment
     try:
-        response = requests.post(endpoint, json={"data": frame[FEATURE_COLUMNS].to_dict(orient="records")}, headers=headers, timeout=20)
+        response = requests.post(endpoint, json={"data": frame[FEATURE_COLUMNS].to_dict(orient="records")}, headers=headers, timeout=20, allow_redirects=False)
+        if 300 <= response.status_code < 400:
+            raise ModelIntegrationError("QuickML redirected the request. Use the exact HTTPS inference URL for the published endpoint and region.")
         if response.status_code == 401 or response.status_code == 403:
             raise ModelIntegrationError("QuickML rejected authentication. Check the endpoint key, OAuth token, organization, and environment settings.")
         if response.status_code == 429:
@@ -124,6 +137,10 @@ def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
         if not response.ok:
             raise ModelIntegrationError(f"QuickML returned HTTP {response.status_code}.")
         result = response.json()
+    except requests.exceptions.SSLError as error:
+        raise ModelIntegrationError("QuickML TLS certificate verification failed. Check system time and the trusted certificate configuration; do not disable verification.") from error
+    except requests.exceptions.ProxyError as error:
+        raise ModelIntegrationError("The backend proxy could not reach QuickML. Check the inference hostname against the network allowlist and proxy settings.") from error
     except requests.Timeout as error:
         raise ModelIntegrationError("QuickML request timed out after 20 seconds.") from error
     except requests.RequestException as error:
@@ -149,7 +166,9 @@ def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
         predictions = np.asarray(values, dtype=float)
     except (TypeError, ValueError) as error:
         raise ModelIntegrationError("QuickML returned non-numerical predictions.") from error
-    if predictions.ndim != 1 or len(predictions) != len(frame):
+    if predictions.ndim != 1:
+        raise ModelIntegrationError("QuickML must return a one-dimensional predictions array, with one numeric value per input row.")
+    if len(predictions) != len(frame):
         raise ModelIntegrationError(f"QuickML returned {len(predictions)} predictions for {len(frame)} input rows.")
     if not np.isfinite(predictions).all():
         raise ModelIntegrationError("QuickML returned NaN or infinite predictions.")

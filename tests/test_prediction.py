@@ -95,6 +95,29 @@ class PredictionContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelIntegrationError, "NaN or infinite"):
             _quickml_predictions_for_test([float("inf"), 130.0])
 
+    def test_invalid_endpoint_is_rejected_before_sending_credentials(self) -> None:
+        for endpoint in ("<published-endpoint-url>", "http://example.invalid", "https://user:secret@example.invalid", "https://console.catalyst.zoho.in/project"):
+            with self.subTest(endpoint=endpoint), patch("backend.model_service.requests.post") as post:
+                with self.assertRaises(ModelIntegrationError):
+                    _quickml_predictions(self.sample, endpoint)
+                post.assert_not_called()
+
+    def test_transport_failures_are_distinct_and_redacted(self) -> None:
+        import requests
+        cases = [(requests.exceptions.SSLError, "certificate"), (requests.exceptions.ProxyError, "proxy"), (requests.ConnectionError, "Could not reach")]
+        for exception, expected in cases:
+            with self.subTest(exception=exception), patch("backend.model_service.requests.post", side_effect=exception("private-token")):
+                with self.assertRaisesRegex(ModelIntegrationError, expected) as raised:
+                    _quickml_predictions(self.sample, "https://example.invalid")
+                self.assertNotIn("private-token", str(raised.exception))
+
+    def test_redirect_does_not_forward_endpoint_credentials(self) -> None:
+        from types import SimpleNamespace
+        with patch("backend.model_service.requests.post", return_value=SimpleNamespace(status_code=302)) as post:
+            with self.assertRaisesRegex(ModelIntegrationError, "redirected"):
+                _quickml_predictions(self.sample, "https://example.invalid")
+            self.assertFalse(post.call_args.kwargs["allow_redirects"])
+
 
 def _quickml_predictions_for_test(values: list[float]) -> np.ndarray:
     frame = pd.DataFrame({"timestamp": ["2025-01-01 00:00:00", "2025-01-01 01:00:00"], "ambient_temp_c": [20, 20], "humidity_pct": [50, 50], "solar_irradiance_wm2": [0, 0]})

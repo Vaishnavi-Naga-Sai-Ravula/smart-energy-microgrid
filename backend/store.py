@@ -73,6 +73,13 @@ def initialize_store(path: str | Path | None = None) -> None:
         )
 
 
+def check_store() -> None:
+    """Verify the configured database and required schema without writing user data."""
+    with _database() as connection:
+        connection.execute("SELECT id FROM datasets LIMIT 1").fetchall()
+        connection.execute("SELECT id FROM forecasts LIMIT 1").fetchall()
+
+
 def _name(value: Any) -> str:
     name = " ".join(str(value or "").split())
     if not name:

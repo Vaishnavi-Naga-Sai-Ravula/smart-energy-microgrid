@@ -4,6 +4,7 @@ import json
 import os
 import tempfile
 import threading
+import sqlite3
 import unittest
 from datetime import datetime, timedelta
 from http.client import HTTPConnection
@@ -62,6 +63,27 @@ class ServerApiTests(unittest.TestCase):
         status, payload = self.request_json("POST", "/api/validate", {})
         self.assertEqual(status, 400)
         self.assertIn("Choose a CSV, TSV, or JSON", payload["error"])
+
+    def test_readiness_checks_storage_and_packaged_assets(self) -> None:
+        status, payload = self.request_json("GET", "/api/ready")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["status"], "ready")
+        with patch("backend.server.check_store", side_effect=sqlite3.OperationalError("private database path")):
+            status, payload = self.request_json("GET", "/api/ready")
+        self.assertEqual(status, 503)
+        self.assertNotIn("private database path", json.dumps(payload))
+        with patch("backend.server.SAMPLE_FILE", self.database.parent / "missing.csv"):
+            status, payload = self.request_json("GET", "/api/ready")
+        self.assertEqual(status, 503)
+
+    def test_quickml_failure_preserves_saved_input_for_retry(self) -> None:
+        from backend.model_service import ModelIntegrationError
+        with patch("backend.server.predict_features", side_effect=ModelIntegrationError("QuickML unavailable")):
+            status, payload = self.request_json("POST", "/api/forecast", {"rows": self.rows(), "dataset_name": "Retry input"})
+        self.assertEqual(status, 502)
+        status, saved = self.request_json("GET", "/api/datasets/" + payload["saved_dataset_id"])
+        self.assertEqual(status, 200)
+        self.assertEqual(len(saved["rows"]), 24)
 
     def test_malformed_rows_return_input_error_not_server_error(self) -> None:
         status, payload = self.request_json("POST", "/api/validate", {"rows": None})

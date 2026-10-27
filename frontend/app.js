@@ -5,7 +5,8 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const state = { rows: [], inputSource: '', result: null, health: null, requestId: 0, activeController: null, datasetId: null, manualMode: false, savedDatasets: [], savedForecasts: [], sortKey: 'timestamp', sortDirection: 1, toastTimer: null };
   const themeQuery = window.matchMedia('(prefers-color-scheme: light)');
-  let themeChoice = localStorage.getItem('gridsense-theme') || 'system';
+  let themeChoice = 'system';
+  try { themeChoice = localStorage.getItem('gridsense-theme') || 'system'; } catch { /* Storage may be disabled in embedded browsers. */ }
 
   function setTheme(choice, persist = true) {
     themeChoice = choice;
@@ -14,7 +15,7 @@
     $('#theme-toggle').textContent = theme === 'dark' ? '☼' : '☾';
     $('#theme-toggle').setAttribute('aria-label', `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`);
     $$('[data-theme-choice]').forEach(button => button.classList.toggle('selected', button.dataset.themeChoice === choice));
-    if (persist) localStorage.setItem('gridsense-theme', choice);
+    if (persist) { try { localStorage.setItem('gridsense-theme', choice); } catch { /* Theme still works for this session. */ } }
   }
   setTheme(themeChoice, false);
   themeQuery.addEventListener('change', () => { if (themeChoice === 'system') setTheme('system', false); });
@@ -90,16 +91,29 @@
   function formatDemand(value, digits = 2) { const numeric = Number(value); return Math.min(Math.abs(numeric - 160), Math.abs(numeric - 200)) < 1 ? numeric.toString() : number(numeric, digits); }
 
   async function api(path, payload, signal, method = payload ? 'POST' : 'GET') {
-    const options = { method, signal, cache: 'no-store' };
+    const controller = new AbortController();
+    const timeout = signal ? null : window.setTimeout(() => controller.abort(), 15_000);
+    const options = { method, signal: signal || controller.signal, cache: 'no-store' };
     if (payload !== undefined && payload !== null) {
       options.headers = { 'Content-Type': 'application/json' };
       options.body = JSON.stringify(payload);
     }
-    const response = await fetch(path, options);
-    let data;
-    try { data = await response.json(); } catch { throw new Error(`Server returned an unreadable response (${response.status}).`); }
-    if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
-    return data;
+    try {
+      const response = await fetch(path, options);
+      let data;
+      try { data = await response.json(); } catch (error) {
+        if (error.name === 'AbortError') throw error;
+        throw new Error(`Server returned an unreadable response (${response.status}).`);
+      }
+      if (!response.ok) throw new Error(data.error || `Request failed (${response.status}).`);
+      return data;
+    } catch (error) {
+      if (error.name === 'TypeError') throw new Error('Cannot reach the GridSense backend. Check the server, internet connection, and that this page uses the correct host and port.');
+      if (!signal && error.name === 'AbortError') throw new Error('The backend took too long to respond. Check the server and retry.');
+      throw error;
+    } finally {
+      if (timeout !== null) window.clearTimeout(timeout);
+    }
   }
 
   async function checkHealth() {
@@ -413,7 +427,7 @@
     const requestId = ++state.requestId;
     const controller = new AbortController();
     state.activeController = controller;
-    const timeout = window.setTimeout(() => controller.abort(), 45_000);
+    const timeout = window.setTimeout(() => controller.abort(), 120_000);
     loading(true);
     if (sourceButton) sourceButton.disabled = true;
     try {
@@ -424,6 +438,13 @@
       state.result = forecast;
       renderForecast(forecast);
       const isDemo = forecast.model_source.toLowerCase().startsWith('local demo model');
+      if (!isDemo) {
+        $('#connection-label').textContent = 'QuickML forecast received';
+        $('#connection-chip .status-dot').className = 'status-dot';
+        $('#endpoint-state').textContent = 'Last forecast succeeded';
+        $('#settings-quickml').textContent = 'Last inference returned a valid forecast';
+        $('#settings-quickml-badge').textContent = 'Last inference succeeded';
+      }
       setNotice(`Forecast ready · ${forecast.model_source}${forecast.evaluation ? ` · chronological holdout RMSE ${number(forecast.evaluation.rmse_kw, 2)} kW` : ''}.`, isDemo ? '' : 'success');
       updateSourceBanner(forecast);
       state.inputSource = forecast.input_source;
@@ -432,6 +453,13 @@
       notify(forecast.summary.forecast_status);
     } catch (error) {
       if (requestId !== state.requestId) return;
+      if (state.health && state.health.model.quickml_configured) {
+        $('#connection-label').textContent = 'Forecast needs attention';
+        $('#connection-chip .status-dot').className = 'status-dot bad';
+        $('#endpoint-state').textContent = 'Latest forecast attempt failed';
+        $('#settings-quickml').textContent = 'Check the latest forecast error before retrying';
+        $('#settings-quickml-badge').textContent = 'Needs attention';
+      }
       const message = error.name === 'AbortError' ? 'Forecast request timed out. Check the backend or model endpoint and retry.' : error.message;
       const savedMessage = state.datasetId ? ` Your input is saved as “${$('#dataset-name').value.trim()}”.` : '';
       setNotice(`${message}${savedMessage}`, 'error');

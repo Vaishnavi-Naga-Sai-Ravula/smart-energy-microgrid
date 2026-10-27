@@ -15,6 +15,9 @@ FILES = [
     "test_eval.py",
     "requirements.txt",
     "Procfile",
+    "scripts/smoke_test.py",
+    "README.md",
+    "docs/submission-checklist.md",
 ]
 DIRECTORIES = ["backend", "frontend"]
 
@@ -33,6 +36,7 @@ def main() -> None:
         source = ROOT / filename
         if not source.is_file():
             raise SystemExit(f"Required project file is missing: {source}")
+        (destination / filename).parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination / filename)
     for dirname in DIRECTORIES:
         shutil.copytree(ROOT / dirname, destination / dirname, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))

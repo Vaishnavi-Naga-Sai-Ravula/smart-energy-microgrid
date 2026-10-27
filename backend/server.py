@@ -17,7 +17,7 @@ import pandas as pd
 
 from backend.grid_engine import InputValidationError, build_forecast, parse_tabular_text, validate_records
 from backend.model_service import ModelIntegrationError, model_status, predict_features
-from backend.store import delete_dataset, get_dataset, get_forecast, initialize_store, list_datasets, list_forecasts, save_dataset, save_forecast
+from backend.store import check_store, delete_dataset, get_dataset, get_forecast, initialize_store, list_datasets, list_forecasts, save_dataset, save_forecast
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = ROOT / "frontend"
@@ -60,6 +60,21 @@ class GridSenseHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - stdlib handler interface
         path = urlparse(self.path).path
+        if path == "/api/ready":
+            try:
+                check_store()
+                assets = [WEB_ROOT / name for name in ("index.html", "app.js", "styles.css", "intake.css")]
+                assets.append(SAMPLE_FILE)
+                if not model_status()["quickml_configured"]:
+                    assets.append(ROOT / "train_telemetry.csv")
+                if not all(asset.is_file() for asset in assets):
+                    raise OSError("Required application assets are missing")
+            except (SQLiteError, OSError):
+                logger.exception("Application readiness check failed")
+                self._send_json(503, {"status": "not_ready", "error": "Check database access and packaged application assets. Inspect server logs for details."})
+                return
+            self._send_json(200, {"status": "ready", "checks": {"database": "ok", "assets": "ok"}, "quickml_inference": "Not checked; verify with a forecast."})
+            return
         if path == "/api/health":
             self._send_json(200, {"status": "ok", "service": "GridSense AI", "timestamp": datetime.now(timezone.utc).isoformat(), "model": model_status(), "infrastructure": "Software decision support only; no hardware is connected."})
             return
