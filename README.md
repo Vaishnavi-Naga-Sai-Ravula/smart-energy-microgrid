@@ -71,6 +71,8 @@ The first command summarizes the official CSV files. The second calculates local
 
 ## Troubleshooting startup and QuickML
 
+For renewable OAuth credentials and live verification, see [QuickML authentication](docs/quickml-authentication.md).
+
 The commands above explicitly select port **5000**. The server defaults to **5000** when `PORT` is absent; setting it explicitly keeps the launch command clear. Catalyst's `X_ZOHO_CATALYST_LISTEN_PORT`, when provided, takes precedence over `PORT`. Restart the server after changing environment variables, and keep its terminal open.
 
 For a blank page or “Failed to fetch”, run these commands in a second PowerShell terminal:

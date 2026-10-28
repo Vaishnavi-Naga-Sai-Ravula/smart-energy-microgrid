@@ -62,6 +62,20 @@ class PredictionContractTests(unittest.TestCase):
         self.assertEqual(headers["CATALYST-ORG"], "example-org")
         self.assertEqual(headers["Environment"], "Development")
 
+    def test_published_quickml_numeric_batch_response(self) -> None:
+        from types import SimpleNamespace
+        response = SimpleNamespace(
+            status_code=200, ok=True,
+            json=lambda: {"result": [95.34269999999995, 93.13929999999999],
+                          "pipeLineType": "prediction", "status": "success"},
+        )
+        frame = self.sample.iloc[:2].copy()
+        with patch("backend.model_service.requests.post", return_value=response) as post:
+            values = _quickml_predictions(frame, "https://example.invalid")
+        self.assertEqual(values.tolist(), [95.34269999999995, 93.13929999999999])
+        self.assertEqual(post.call_args.kwargs["json"],
+                         {"data": frame.to_dict(orient="records")})
+
     def test_quickml_failure_does_not_silently_fall_back(self) -> None:
         frame = self.sample.iloc[:2].copy()
         with patch.dict(os.environ, {"QUICKML_ENDPOINT_URL": "https://example.invalid/quickml"}), patch("backend.model_service.requests.post", side_effect=__import__("requests").Timeout("slow")):

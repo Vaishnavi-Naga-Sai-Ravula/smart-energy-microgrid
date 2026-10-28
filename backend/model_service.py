@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import threading
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -102,6 +103,54 @@ def _load_local_model() -> tuple[Any, dict[str, float]]:
         return _cached_model, _cached_evaluation
 
 
+_oauth_lock = threading.Lock()
+_oauth_cache: tuple[tuple[str, ...], str, float] | None = None
+
+
+def _oauth_access_token() -> str:
+    """Prefer renewable server credentials; retain static-token compatibility."""
+    global _oauth_cache
+    credentials = tuple(os.environ.get(name, "").strip() for name in
+                        ("ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN"))
+    if not any(credentials):
+        return os.environ.get("ZOHO_OAUTH_TOKEN", "").strip()
+    if not all(credentials):
+        raise ModelIntegrationError("Set all three Zoho OAuth refresh credentials: client ID, client secret, and refresh token.")
+    accounts = os.environ.get("ZOHO_ACCOUNTS_URL", "https://accounts.zoho.in").strip().rstrip("/")
+    allowed = {"https://accounts.zoho." + suffix for suffix in
+               ("com", "eu", "in", "com.au", "jp", "ca", "sa", "com.cn")}
+    allowed.add("https://accounts.zohocloud.ae")
+    if accounts not in allowed:
+        raise ModelIntegrationError("Use an official Zoho Accounts HTTPS URL for the account's data center.")
+    identity = (*credentials, accounts)
+    with _oauth_lock:
+        if _oauth_cache and _oauth_cache[0] == identity and time.monotonic() < _oauth_cache[2]:
+            return _oauth_cache[1]
+        try:
+            response = requests.post(
+                accounts + "/oauth/v2/token",
+                data={"grant_type": "refresh_token", "client_id": credentials[0],
+                      "client_secret": credentials[1], "refresh_token": credentials[2]},
+                timeout=20, allow_redirects=False,
+            )
+            if not response.ok or not 200 <= response.status_code < 300:
+                raise ModelIntegrationError("Zoho OAuth refresh failed. Check credentials, account region, and connectivity.")
+            payload = response.json()
+        except (requests.RequestException, ValueError) as error:
+            raise ModelIntegrationError("Zoho OAuth refresh failed. Check connectivity, TLS trust, and credentials.") from error
+        if not isinstance(payload, dict) or payload.get("error"):
+            raise ModelIntegrationError("Zoho rejected the OAuth refresh credentials.")
+        token = payload.get("access_token")
+        try:
+            ttl = float(payload.get("expires_in", 0))
+        except (TypeError, ValueError):
+            ttl = 0
+        if not isinstance(token, str) or not token.strip() or not np.isfinite(ttl) or ttl <= 0:
+            raise ModelIntegrationError("Zoho OAuth returned an invalid token or expiry.")
+        _oauth_cache = (identity, token.strip(), time.monotonic() + ttl - min(60, ttl / 10))
+        return token.strip()
+
+
 def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
     try:
         address = urlsplit(endpoint)
@@ -115,7 +164,7 @@ def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
         raise ModelIntegrationError("The Catalyst console page is not an inference URL. Create an endpoint and copy its prediction URL.")
     headers = {"Content-Type": "application/json"}
     endpoint_key = os.environ.get("QUICKML_ENDPOINT_KEY", "").strip()
-    oauth_token = os.environ.get("ZOHO_OAUTH_TOKEN", "").strip()
+    oauth_token = _oauth_access_token()
     catalyst_org = os.environ.get("CATALYST_ORG", "").strip()
     environment = os.environ.get("CATALYST_ENVIRONMENT", "").strip()
     if endpoint_key:
@@ -201,6 +250,6 @@ def model_status() -> dict[str, Any]:
         "quickml_configured": bool(endpoint),
         "quickml_status": "Configured; connection is verified on forecast" if endpoint else "Not configured",
         "prediction_source": "Zoho Catalyst QuickML" if endpoint else "Local demonstration model",
-        "api_token_configured": bool(os.environ.get("ZOHO_OAUTH_TOKEN", "").strip() or os.environ.get("QUICKML_ENDPOINT_KEY", "").strip()),
+        "api_token_configured": bool(os.environ.get("ZOHO_OAUTH_TOKEN", "").strip() or os.environ.get("QUICKML_ENDPOINT_KEY", "").strip() or all(os.environ.get(name, "").strip() for name in ("ZOHO_CLIENT_ID", "ZOHO_CLIENT_SECRET", "ZOHO_REFRESH_TOKEN"))),
         "uncertainty": "Point estimates; prediction uncertainty is not quantified.",
     }
