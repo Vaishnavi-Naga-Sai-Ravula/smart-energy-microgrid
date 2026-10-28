@@ -165,8 +165,8 @@ def _quickml_predictions(frame: pd.DataFrame, endpoint: str) -> np.ndarray:
     headers = {"Content-Type": "application/json"}
     endpoint_key = os.environ.get("QUICKML_ENDPOINT_KEY", "").strip()
     oauth_token = _oauth_access_token()
-    catalyst_org = os.environ.get("CATALYST_ORG", "").strip()
-    environment = os.environ.get("CATALYST_ENVIRONMENT", "").strip()
+    catalyst_org = os.environ.get("QUICKML_ORG", "").strip() or os.environ.get("CATALYST_ORG", "").strip()
+    environment = os.environ.get("QUICKML_ENVIRONMENT", "").strip() or os.environ.get("CATALYST_ENVIRONMENT", "").strip()
     if endpoint_key:
         headers["X-QUICKML-ENDPOINT-KEY"] = endpoint_key
     if oauth_token:

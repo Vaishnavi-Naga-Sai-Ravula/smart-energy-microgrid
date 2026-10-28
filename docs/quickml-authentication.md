@@ -11,10 +11,12 @@ Configure these variables in the backend environment, never frontend JavaScript:
 
 - `QUICKML_ENDPOINT_URL`: exact HTTPS prediction URL from the published endpoint.
 - `QUICKML_ENDPOINT_KEY`: private endpoint key.
-- `CATALYST_ORG`: organization identifier from required headers.
-- `CATALYST_ENVIRONMENT`: `Development` for the tested deployment.
+- `QUICKML_ORG`: organization identifier from required headers.
+- `QUICKML_ENVIRONMENT`: `Development` for the tested deployment.
 - `ZOHO_CLIENT_ID`, `ZOHO_CLIENT_SECRET`, `ZOHO_REFRESH_TOKEN`: renewable OAuth credentials.
 - `ZOHO_ACCOUNTS_URL`: `https://accounts.zoho.in` for the India account.
+
+AppSail rejects user-defined `CATALYST_ORG` and `CATALYST_ENVIRONMENT` as reserved names. Use the `QUICKML_` names above; the backend still sends the required HTTP headers `CATALYST-ORG` and `Environment`. The old variable names remain supported locally, with nonempty `QUICKML_` values taking precedence.
 
 Authorize the refresh token with `QuickML.deployment.READ`. The backend requests
 an access token on first inference and caches it until shortly before expiry.

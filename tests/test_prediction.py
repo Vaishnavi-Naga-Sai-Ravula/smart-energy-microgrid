@@ -76,6 +76,20 @@ class PredictionContractTests(unittest.TestCase):
         self.assertEqual(post.call_args.kwargs["json"],
                          {"data": frame.to_dict(orient="records")})
 
+    def test_appsail_variable_aliases_take_precedence(self) -> None:
+        from types import SimpleNamespace
+        settings = {"QUICKML_ORG": "new-org", "QUICKML_ENVIRONMENT": "Development",
+                    "CATALYST_ORG": "old-org", "CATALYST_ENVIRONMENT": "Production"}
+        response = SimpleNamespace(ok=True, status_code=200,
+                                   json=lambda: {"result": [1.0, 2.0]})
+        with patch.dict(os.environ, settings, clear=True), patch(
+            "backend.model_service.requests.post", return_value=response
+        ) as post:
+            _quickml_predictions(self.sample.iloc[:2], "https://example.invalid")
+        headers = post.call_args.kwargs["headers"]
+        self.assertEqual(headers["CATALYST-ORG"], "new-org")
+        self.assertEqual(headers["Environment"], "Development")
+
     def test_quickml_failure_does_not_silently_fall_back(self) -> None:
         frame = self.sample.iloc[:2].copy()
         with patch.dict(os.environ, {"QUICKML_ENDPOINT_URL": "https://example.invalid/quickml"}), patch("backend.model_service.requests.post", side_effect=__import__("requests").Timeout("slow")):
