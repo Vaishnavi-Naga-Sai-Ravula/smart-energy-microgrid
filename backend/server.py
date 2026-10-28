@@ -41,19 +41,82 @@ class GridSenseHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(encoded)
 
-    def _read_json(self) -> dict:
+    def _read_body(self) -> bytes:
+        limit = 2_000_000
+        self.connection.settimeout(30)
+        transfers = self.headers.get_all("Transfer-Encoding", [])
+        lengths = self.headers.get_all("Content-Length", [])
+
+        if transfers:
+            if lengths or len(transfers) != 1 or transfers[0].strip().lower() != "chunked":
+                raise InputValidationError("Unsupported or ambiguous request framing.")
+
+            body = bytearray()
+            for _ in range(10000):
+                line = self.rfile.readline(8193)
+                if len(line) > 8192 or not line.endswith(b"\r\n"):
+                    raise InputValidationError("Invalid chunk header.")
+
+                token = line[:-2].split(b";", 1)[0]
+                if not token or any(c not in b"0123456789abcdefABCDEF" for c in token):
+                    raise InputValidationError("Invalid chunk size.")
+
+                size = int(token, 16)
+                if len(body) + size > limit:
+                    raise InputValidationError("Request body exceeds the 2 MB limit.")
+
+                if size == 0:
+                    trailer_bytes = 0
+                    while True:
+                        trailer = self.rfile.readline(8193)
+                        trailer_bytes += len(trailer)
+                        if trailer_bytes > 8192 or not trailer.endswith(b"\r\n"):
+                            raise InputValidationError("Invalid chunk trailers.")
+                        if trailer == b"\r\n":
+                            return bytes(body)
+                        if b":" not in trailer:
+                            raise InputValidationError("Invalid chunk trailers.")
+
+                chunk = self.rfile.read(size)
+                if len(chunk) != size or self.rfile.read(2) != b"\r\n":
+                    raise InputValidationError("Incomplete chunked request body.")
+                body.extend(chunk)
+
+            raise InputValidationError("Too many request chunks.")
+
+        if len(lengths) > 1:
+            raise InputValidationError("Ambiguous request content length.")
+
         try:
-            length = int(self.headers.get("Content-Length", "0"))
+            length = int(lengths[0]) if lengths else 0
         except ValueError as error:
             raise InputValidationError("Invalid request content length.") from error
+
         if length <= 0:
             raise InputValidationError("Request body is empty.")
-        if length > 2_000_000:
+        if length > limit:
             raise InputValidationError("Request body exceeds the 2 MB limit.")
+
+        body = self.rfile.read(length)
+        if len(body) != length:
+            raise InputValidationError("Incomplete request body.")
+        return body
+
+    def _read_json(self) -> dict:
+        self.close_connection = True
         try:
-            payload = json.loads(self.rfile.read(length))
+            body = self._read_body()
+        except (OSError, TimeoutError) as error:
+            raise InputValidationError("Request body could not be read completely.") from error
+
+        if not body:
+            raise InputValidationError("Request body is empty.")
+
+        try:
+            payload = json.loads(body)
         except (json.JSONDecodeError, UnicodeDecodeError) as error:
             raise InputValidationError("Request body must be valid JSON.") from error
+
         if not isinstance(payload, dict):
             raise InputValidationError("Request body must be a JSON object.")
         return payload
